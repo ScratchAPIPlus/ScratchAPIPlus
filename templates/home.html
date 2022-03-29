@@ -2,12 +2,13 @@
 {% block title %}Home{% endblock %}
 
 {% block head %}
-  <link rel="stylesheet" href="{{url_for('static', filename='/css/home.css')}}">
+  <link rel="stylesheet" href="{{url_for('static', filename='css/home.css')}}">
 {% endblock %}
 
 {% block body %}
   <h1>ScratchAPI+</h1>
   <p class="about">
-    ScratchAPI+ is an API for Scratch but it's better than the normal API as the name suggests.
+    ScratchAPI+ is a RESTful API that allows you to get information about Scratch users, studios, and more.
+    View the docs <a href="{{url_for('static', filename='docs/v1/index.html')}}">here</a>.
   </p>
 {% endblock %}
