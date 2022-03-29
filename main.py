@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, url_for, make_response, request
+from flask import Flask, jsonify, url_for, make_response, request, render_template
 import requests
 app = Flask(__name__)
 
@@ -10,6 +10,10 @@ def normal_user_to_partial_user(user):
     }
   
 
+@app.route('/')
+def home():
+  return render_template("home.html")
+
 @app.route('/api/v1/')
 def api():
   return jsonify({
@@ -17,7 +21,7 @@ def api():
     "docs": url_for("static", filename="docs/v1/index.html")
   })
 
-@app.route('/api/v1/users/<str:username>')
+@app.route('/api/v1/users/<username>')
 def user(username):
   if username.endswith("*"): username = username[:-1]
   res = requests.get(f"https://api.scratch.mit.edu/users/{username}")

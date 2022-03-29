@@ -1,3 +1,27 @@
+:root {
+  --get-colour: #67ff8d;
+  --post-colour: #c46bff;
+}
+
 body {
-    font-family: 'Seoge UI', 'Microsoft YaHei', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+  font-family: 'Seoge UI', 'Microsoft YaHei', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+}
+
+.request {
+  display: flex;
+}
+
+.request>.method {
+  margin-right: 10px;
+  width: min-content;
+  border-radius: 16px;
+  padding: 5px 10px;
+}
+
+[data-method="GET"] {
+  background: var(--get-colour);
+}
+
+[data-method="POST"] {
+  background: var(--post-colour);
 }

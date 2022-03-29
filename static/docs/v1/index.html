@@ -10,7 +10,10 @@
   </head>
   <body>
     <h1>v1 Docs</h1>
-    <h2>GET /users/ScratchCat</h2>
+    <div class="request">
+      <h3 class="method" data-method="GET">GET</h3>
+      <h2> /users/ScratchCat</h2>
+    </div>
     <h3>Paramaters</h3>
     <table>
       <tr>
@@ -22,6 +25,11 @@
         <td>nofollow</td>
         <td>None</td>
         <td>Doesn't get the user's followers and following</td>
+      </tr>
+      <tr>
+        <td>nostatus</td>
+        <td>None</td>
+        <td>Doesn't get the user's ocular status</td>
       </tr>
     </table>
     <p>Calling that will respond with a <a href="#user-object">User Object</a></p>
