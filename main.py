@@ -10,13 +10,14 @@ def normal_user_to_partial_user(user):
     }
   
 
-@app.route('/api/')
+@app.route('/api/v1/')
 def api():
   return jsonify({
-    "home": url_for("home")
+    "home": url_for("home"),
+    "docs": url_for("static", filename="docs/v1/index.html")
   })
 
-@app.route('/api/v1/users/<username>')
+@app.route('/api/v1/users/<str:username>')
 def user(username):
   if username.endswith("*"): username = username[:-1]
   res = requests.get(f"https://api.scratch.mit.edu/users/{username}")
@@ -29,18 +30,16 @@ def user(username):
       following.append(normal_user_to_partial_user(follow))
     for follow in followers_res:
       followers.append(normal_user_to_partial_user(follow))
-  ocular_res = requests.get(f"https://my-ocular.jeffalo.net/api/user/{username}")
-  if res and ocular_res:
+  if request.args.get("nostatus") == None:
+    ocular_res = requests.get(f"https://my-ocular.jeffalo.net/api/user/{username}")
+  if res:
     res = res.json()
-    ocular_res = ocular_res.json()
     
     json = {
       "username": res["username"],
       "id": res["id"],
       "about": res["profile"]["bio"],
       "working_on": res["profile"]["status"],
-      "status": ocular_res["status"],
-      "status_colour": ocular_res["color"],
       "scratch_team": res["scratchteam"],
       "image_id": res["profile"]["id"],
       "country": res["profile"]["country"],
@@ -50,7 +49,11 @@ def user(username):
     if request.args.get("nofollow") == None:
       json["following"] = following
       json["followers"] = followers
-
+    
+    if request.args.get("nostatus") == None:
+      ocular_res = ocular_res.json()
+      json["status"] = ocular_res["status"]
+      json["status_colour"] = ocular_res["color"]
     return jsonify(json)
   elif res.status_code == 404:
     return make_response(jsonify({
