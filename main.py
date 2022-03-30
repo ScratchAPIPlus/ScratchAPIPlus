@@ -1,6 +1,5 @@
-from textwrap import indent
 from flask import Flask, jsonify, url_for, make_response, request, render_template, send_from_directory
-import requests, os, json
+import requests, os
 from html_to_json import convert as html_to_json
 app = Flask(__name__)
 
@@ -83,17 +82,35 @@ def user_comments(username):
   if request.method == "GET":
     res = requests.get(f"https://scratch.mit.edu/site-api/comments/user/{username}")
     if res:
-      res = html_to_json(res.text)["li"]
+      try:
+        res = html_to_json(res.text)["li"]
+      except KeyError:
+        return jsonify([])
       comments = []
       for comment in res:
-        comment = comment["div"][0]
-        comments.append({
-          "id": comment["_attributes"]["data-comment-id"],
-          "user": comment["user"],
-          "comment": comment["comment"],
-          "date": comment["date"][:10],
-          "time": comment["date"][11:-5]
-        })
+        try:
+          comment["ul"][0]["li"]
+        except KeyError:
+          comments.append({
+            "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
+            "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+            "comment": comment["div"][0]["div"][1]["div"][1]["_value"],
+            "replies": []
+          })
+        else:
+          replies = []
+          for reply_comment in comment["ul"][0]["li"]:
+            replies.append({
+              "id": int(reply_comment["div"][0]["_attributes"]["data-comment-id"]),
+              "username": reply_comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+              "comment": reply_comment["div"][0]["div"][1]["div"][1]["_value"]
+            })
+          comments.append({
+            "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
+            "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+            "comment": comment["div"][0]["div"][1]["div"][1],
+            "replies": replies
+          })
       return jsonify(comments)
     else:
       return make_response(jsonify({
