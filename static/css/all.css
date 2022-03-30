@@ -1,6 +1,9 @@
 :root {
   --get-colour: #67ff8d;
-  --post-colour: #c46bff;
+  --post-colour: #d28eff;
+  --delete-colour: #ff8e8e;
+  --put-colour: #fffd8e;
+  --patch-colour: #8eb6ff;
 }
 
 body {
@@ -24,4 +27,16 @@ body {
 
 [data-method="POST"] {
   background: var(--post-colour);
+}
+
+[data-method="DELETE"] {
+  background: var(--delete-colour);
+}
+
+[data-method="PUT"] {
+  background: var(--put-colour);
+}
+
+[data-method="PATCH"] {
+  background: var(--patch-colour);
 }

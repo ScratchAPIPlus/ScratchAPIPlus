@@ -80,7 +80,10 @@ def user_comments(username):
   # https://scratch.mit.edu/site-api/comments/user/OS_Cool_/add/
   if username.endswith("*"): username = username[:-1]
   if request.method == "GET":
-    res = requests.get(f"https://scratch.mit.edu/site-api/comments/user/{username}")
+    if request.args.get("page"):
+      res = requests.get(f"https://scratch.mit.edu/site-api/comments/user/{username}?page={request.args.get('page')}")
+    else:
+      res = requests.get(f"https://scratch.mit.edu/site-api/comments/user/{username}")
     if res:
       try:
         res = html_to_json(res.text)["li"]
@@ -91,26 +94,55 @@ def user_comments(username):
         try:
           comment["ul"][0]["li"]
         except KeyError:
-          comments.append({
-            "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
-            "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
-            "comment": comment["div"][0]["div"][1]["div"][1]["_value"],
-            "replies": []
-          })
+          try:
+            comment["div"][0]["div"][1]["div"][1]["_value"]
+          except KeyError:
+            comments.append({
+              "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
+              "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+              "comment": "",
+              "replies": []
+            })
+          else:
+            comments.append({
+              "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
+              "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+              "comment": comment["div"][0]["div"][1]["div"][1]["_value"],
+              "replies": []
+            })
         else:
           replies = []
           for reply_comment in comment["ul"][0]["li"]:
-            replies.append({
-              "id": int(reply_comment["div"][0]["_attributes"]["data-comment-id"]),
-              "username": reply_comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
-              "comment": reply_comment["div"][0]["div"][1]["div"][1]["_value"]
+            try:
+              reply_comment["div"][0]["div"][1]["div"][1]["_value"]
+            except KeyError:
+              replies.append({
+                "id": int(reply_comment["div"][0]["_attributes"]["data-comment-id"]),
+                "username": reply_comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+                "comment": ""
+              })
+            else:
+              replies.append({
+                "id": int(reply_comment["div"][0]["_attributes"]["data-comment-id"]),
+                "username": reply_comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+                "comment": reply_comment["div"][0]["div"][1]["div"][1]["_value"]
+              })
+          try:
+            comment["div"][0]["div"][1]["div"][1]["_value"]
+          except KeyError:
+            comments.append({
+              "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
+              "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+              "comment": "",
+              "replies": replies
             })
-          comments.append({
-            "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
-            "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
-            "comment": comment["div"][0]["div"][1]["div"][1],
-            "replies": replies
-          })
+          else:
+            comments.append({
+              "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
+              "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+              "comment": comment["div"][0]["div"][1]["div"][1]["_value"],
+              "replies": replies
+            })
       return jsonify(comments)
     else:
       return make_response(jsonify({
@@ -122,11 +154,21 @@ def user_comments(username):
         "error": "No comment specified"
       }),400)
     token = request.headers["x-token"]
-    res = requests.post(f"https://scratch.mit.edu/site-api/comments/user/{username}/add", data={"content": request.args.get("comment")}, headers={"x-csrftoken": token})
+    headers = {
+      "Cookie": f"scratchcsfrtoken={token}",
+      "Referer": "https://scratch.mit.edu/",
+      "X-CSFRToken": token
+    }
+    json = {
+      "content": request.args.get("comment"),
+      "parent_id": "",
+      "commetee_id": ""
+    }
+    res = requests.post(f"https://scratch.mit.edu/site-api/comments/user/{username}/add", json=json, headers=headers)
     if res:
       return make_response(jsonify({
         "success": "Comment added"
-      }),200)
+      }),201)
     else:
       return make_response(jsonify({
         "error": "Unknown error"
