@@ -81,6 +81,28 @@ def api():
     "docs": url_for('docs', version='v1')
   })
 
+@app.route('/api/v1/home')
+def home_api():
+  res = requests.get('https://api.scratch.mit.edu/proxy/featured').json()
+  return jsonify({
+    "featured_projects": [
+      {
+        "id": project["id"],
+        "title": project["title"],
+        "description": project["description"],
+        "thumbnail": project["thumbnail"],
+        "url": project["url"]
+      } for project in res["community_featured_projects"]
+    ],
+    "featured_studios": [
+      {
+        "id": studio["id"],
+        "name": studio["name"],
+        "thumbnail_utl": studio["thubnail_url"],
+      } for studio in res["featured_studios"]
+    ]
+  })
+
 @app.route('/api/v1/users/<username>')
 def user(username):
   if username.endswith("*"): username = username[:-1]
