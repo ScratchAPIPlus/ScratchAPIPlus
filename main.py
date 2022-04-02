@@ -140,8 +140,13 @@ def user(username):
     
     if request.args.get("nostatus") == None:
       ocular_res = ocular_res.json()
-      json["status"] = ocular_res["status"]
-      json["status_colour"] = ocular_res["color"]
+      try:
+        json["status"] = ocular_res["status"]
+        json["status_colour"] = ocular_res["color"]
+      except KeyError:
+        json["status"] = None
+        json["status_colour"] = None
+        
     return jsonify(json)
   elif res.status_code == 404:
     return make_response(jsonify({
@@ -239,7 +244,30 @@ def user_comments_id(username,id):
       if comment["id"] == id:
         return comment
     return make_response(jsonify({"error":"Couldn't find comment"}),404)
-    
+
+@app.route('/api/v1/search/<query>')
+def search(query):
+  sort_by = "popular" if request.args.get("sort_by") == None or request.args.get("sort_by") == "popular" else "trending"
+  res = requests.get(f"https://api.scratch.mit.edu/search/projects?limit=16&offset=0&language=en&mode={sort_by}&q={query}")
+  if res:
+    res = res.json()
+    projects = []
+    for project in res:
+      projects.append({
+        "author": normal_user_to_partial_user(project["author"]),
+        "id": project["id"],
+        "instrutions": project["instructions"],
+        "notes": project["description"],
+        "title": project["title"],
+        "public": project["public"],
+        "comments_allowed": project["comments_allowed"],
+        "stats": project["stats"]
+      })
+    return jsonify(projects)
+  else:
+    return jsonify({
+      "error": "Unknown error occred"
+    },500)
 
 @app.route("/docs/<version>")
 def docs(version):
