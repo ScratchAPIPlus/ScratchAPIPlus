@@ -5,11 +5,10 @@ from html_to_json import convert as html_to_json
 app = Flask(__name__)
 
 def normal_user_to_partial_user(user):
-    return {
-      "username": user["username"],
-      "id": user["id"],
-      "image_id": user["profile"]["id"]
-    }
+  return {
+    "username": user["username"],
+    "id": user["id"]
+  }
   
 def render_comment_from_html(comment):
   try:
@@ -20,14 +19,20 @@ def render_comment_from_html(comment):
     except KeyError:
       return {
         "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
-        "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+        "user": {
+          "username":comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+          "id":comment["div"][0]["a"][0]["img"][0]["_attributes"]["src"].replace("//cdn2.scratch.mit.edu/get_image/user/","").replace("_60x60.png","")
+        },
         "comment": "",
         "replies": []
       }
     else:
       return {
         "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
-        "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+        "user": {
+          "username":comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+          "id":comment["div"][0]["a"][0]["img"][0]["_attributes"]["src"].replace("//cdn2.scratch.mit.edu/get_image/user/","").replace("_60x60.png","")
+        },
         "comment": comment["div"][0]["div"][1]["div"][1]["_value"],
         "replies": []
       }
@@ -39,13 +44,19 @@ def render_comment_from_html(comment):
       except KeyError:
         replies.append({
           "id": int(reply_comment["div"][0]["_attributes"]["data-comment-id"]),
-          "username": reply_comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+          "user": {
+            "username":reply_comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+            "id":reply_comment["div"][0]["a"][0]["img"][0]["_attributes"]["src"].replace("//cdn2.scratch.mit.edu/get_image/user/","").replace("_60x60.png","")
+          },
           "comment": ""
         })
       else:
         replies.append({
           "id": int(reply_comment["div"][0]["_attributes"]["data-comment-id"]),
-          "username": reply_comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+          "user": {
+            "username":reply_comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+            "id":reply_comment["div"][0]["a"][0]["img"][0]["_attributes"]["src"].replace("//cdn2.scratch.mit.edu/get_image/user/","").replace("_60x60.png","")
+          },
           "comment": reply_comment["div"][0]["div"][1]["div"][1]["_value"]
         })
     try:
@@ -53,14 +64,20 @@ def render_comment_from_html(comment):
     except KeyError:
       return {
         "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
-        "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+        "user": {
+          "username":comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+          "id":comment["div"][0]["a"][0]["img"][0]["_attributes"]["src"].replace("//cdn2.scratch.mit.edu/get_image/user/","").replace("_60x60.png","")
+        },
         "comment": "",
         "replies": replies
       }
     else:
       return {
         "id": int(comment["div"][0]["_attributes"]["data-comment-id"]),
-        "username": comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+        "user": {
+          "username":comment["div"][0]["div"][1]["div"][0]["a"][0]["_value"],
+          "id":comment["div"][0]["a"][0]["img"][0]["_attributes"]["src"].replace("//cdn2.scratch.mit.edu/get_image/user/","").replace("_60x60.png","")
+        },
         "comment": comment["div"][0]["div"][1]["div"][1]["_value"],
         "replies": replies
       }
@@ -116,20 +133,31 @@ def user(username):
       following.append(normal_user_to_partial_user(follow))
     for follow in followers_res:
       followers.append(normal_user_to_partial_user(follow))
+  if request.args.get("noprojects") == None:
+    projects = []
+    projects_res = requests.get(f"https://api.scratch.mit.edu/users/{username}/projects").json()
+    for project in projects_res:
+      projects.append({
+        "id": project["id"],
+        "instrutions": project["instructions"],
+        "notes": project["description"],
+        "title": project["title"],
+        "public": project["public"],
+        "comments_allowed": project["comments_allowed"],
+        "stats": project["stats"]
+      })
   if request.args.get("noactivity") == None:
     pass
   if request.args.get("nostatus") == None:
     ocular_res = requests.get(f"https://my-ocular.jeffalo.net/api/user/{username}")
   if res:
     res = res.json()
-    
     json = {
       "username": res["username"],
       "id": res["id"],
       "about": res["profile"]["bio"],
       "working_on": res["profile"]["status"],
       "scratch_team": res["scratchteam"],
-      "image_id": res["profile"]["id"],
       "country": res["profile"]["country"],
       "join_date": res["history"]["joined"][:10],
       "join_time": res["history"]["joined"][11:-5]
@@ -137,6 +165,8 @@ def user(username):
     if request.args.get("nofollow") == None:
       json["following"] = following
       json["followers"] = followers
+    if request.args.get("noprojects") == None:
+      json["projects"] = projects
     
     if request.args.get("nostatus") == None:
       ocular_res = ocular_res.json()
