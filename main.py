@@ -98,7 +98,7 @@ def api():
     "docs": url_for('docs', version='v1')
   })
 
-@app.route('/api/v1/home')
+@app.route('/api/v1/home/')
 def home_api():
   res = requests.get('https://api.scratch.mit.edu/proxy/featured').json()
   return jsonify({
@@ -120,8 +120,10 @@ def home_api():
     ]
   })
 
-@app.route('/api/v1/users/<username>')
+@app.route('/api/v1/users/<username>/')
 def user(username):
+  if len(username) > 20: return jsonify({"error":"username to long"})
+  if len(username) > 3: return jsonify({"error":"username to short"})
   if username.endswith("*"): username = username[:-1]
   res = requests.get(f"https://api.scratch.mit.edu/users/{username}")
   if request.args.get("nofollow") == None:
@@ -167,7 +169,6 @@ def user(username):
       json["followers"] = followers
     if request.args.get("noprojects") == None:
       json["projects"] = projects
-    
     if request.args.get("nostatus") == None:
       ocular_res = ocular_res.json()
       try:
@@ -187,7 +188,7 @@ def user(username):
       "error": "Unknown error"
     }),500)
 
-@app.route('/api/v1/users/<username>/comments', methods=["GET", "POST"])
+@app.route('/api/v1/users/<username>/comments/', methods=["GET", "POST"])
 def user_comments(username):
   if username.endswith("*"): username = username[:-1]
   if request.method == "GET":
@@ -258,7 +259,7 @@ def user_comments(username):
         "error": "Unknown error"
       }),500)
 
-@app.route('/api/v1/users/<username>/comments/<id>', methods=["GET", "DELETE"])
+@app.route('/api/v1/users/<username>/comments/<id>/', methods=["GET", "DELETE"])
 def user_comments_id(username,id):
   if request.method == "GET":
     page = 1 if request.args.get("page") == None else int(request.args.get("page"))
@@ -274,8 +275,45 @@ def user_comments_id(username,id):
       if comment["id"] == id:
         return comment
     return make_response(jsonify({"error":"Couldn't find comment"}),404)
+    
+@app.route('/api/v1/projects/<id>/comments/')
+def project_comments(id):
+ if request.method == "GET":
+  if request.args.get("page"):
+    res = requests.get(f"https://scratch.mit.edu/site-api/comments/project/{id}?page={request.args.get('page')}")
+  else:
+    res = requests.get(f"https://scratch.mit.edu/site-api/comments/project/{id}")
+  if res:
+    try:
+      res = html_to_json(res.text)["li"]
+    except KeyError:
+      return jsonify([])
+    comments = []
+    for comment in res:
+      comments.append(render_comment_from_html(comment))
+    return jsonify(comments)
+  else:
+    return make_response(jsonify({
+      "error": "Unknown error"
+    }),500) 
 
-@app.route('/api/v1/search/<query>')
+@app.route('/api/v1/projects/<id>/comments/<comment_id>/', methods=["GET","DELETE"])
+def project_comment_id(id,comment_id): 
+  if request.method == "GET":
+    page = 1 if request.args.get("page") == None else int(request.args.get("page"))
+    res = requests.get(f"https://scratch.mit.edu/site-api/comments/project/{id}?page={page}")
+    try:
+      res = html_to_json(res.text)["li"]
+    except KeyError:
+      return make_response(jsonify({"error":"User has no comments on thier page"}),404)
+    comments = []
+    for comment in res:
+      comments.append(render_comment_from_html(comment))
+    for comment in comments:
+      if comment["id"] == int(comment_id):
+        return comment
+    return make_response(jsonify({"error":"Couldn't find comment"}),404)
+@app.route('/api/v1/search/<query>/')
 def search(query):
   sort_by = "popular" if request.args.get("sort_by") == None or request.args.get("sort_by") == "popular" else "trending"
   res = requests.get(f"https://api.scratch.mit.edu/search/projects?limit=16&offset=0&language=en&mode={sort_by}&q={query}")
@@ -299,7 +337,7 @@ def search(query):
       "error": "Unknown error occred"
     },500)
 
-@app.route("/docs/<version>")
+@app.route("/docs/<version>/")
 def docs(version):
   return render_template(f"docs/{version}.html")
 
