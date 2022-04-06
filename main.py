@@ -1,6 +1,7 @@
 from flask import Flask, jsonify, url_for, make_response, request, render_template, send_from_directory
 import requests, os, re
 from html_to_json import convert as html_to_json
+import json as j
 
 app = Flask(__name__)
 
@@ -210,14 +211,10 @@ def user_comments(username):
         "error": "Unknown error"
       }),500)
   elif request.method == "POST":
-    if request.args.get("comment") == None:
-      return make_response(jsonify({
-        "error": "No comment specified"
-      }),400)
+    auth = request.get_json()
     try:
       token = request.headers["x-token"]
     except KeyError:
-      auth = request.get_json()
       username = auth["username"]
       password = auth["password"]
       headers = {
@@ -231,7 +228,7 @@ def user_comments(username):
         "username": username,
         "password": password
       }
-      res = requests.post("https://scratch.mit.edu/login", json=json, headers=headers)
+      res = requests.post("https://scratch.mit.edu/accounts/login/", json=json, headers=headers)
       try:
         token = re.search("scratchcsrftoken=(.*?);", res.headers["Set-Cookie"]).group(1)
       except AttributeError:
@@ -240,16 +237,16 @@ def user_comments(username):
         })
 
     headers = {
-      "Cookie": f"scratchcsfrtoken={token}",
-      "Referer": "https://scratch.mit.edu/",
-      "X-CSFRToken": token
+      "cookie": f"scratchcsfrtoken={res.json()[0]['token']}",
+      "referer": "https://scratch.mit.edu/users/{username}/",
+      "x-csfrtoken": token
     }
     json = {
-      "content": request.args.get("comment"),
+      "content": auth["comment"],
       "parent_id": "",
       "commetee_id": ""
     }
-    res = requests.post(f"https://scratch.mit.edu/site-api/comments/user/{username}/add", json=json, headers=headers)
+    res = requests.post(f"https://scratch.mit.edu/site-api/comments/user/{username}/add", json=j.dumps(json), headers=headers)
     if res:
       return make_response(jsonify({
         "success": "Comment added"
@@ -276,7 +273,7 @@ def user_comments_id(username,id):
         return comment
     return make_response(jsonify({"error":"Couldn't find comment"}),404)
     
-@app.route('/api/v1/projects/<id>/comments/')
+@app.route('/api/v1/projects/<id>/comments/', methods=["GET", "POST"])
 def project_comments(id):
  if request.method == "GET":
   if request.args.get("page"):
